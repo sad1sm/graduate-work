@@ -81,10 +81,104 @@ stage
 1. Рекомендуемый вариант: самостоятельная установка Kubernetes кластера.  
    а. При помощи Terraform подготовить как минимум 3 виртуальных машины Compute Cloud для создания Kubernetes-кластера. Тип виртуальной машины следует выбрать самостоятельно с учётом требовании к производительности и стоимости. Если в дальнейшем поймете, что необходимо сменить тип инстанса, используйте Terraform для внесения изменений.  
    б. Подготовить [ansible](https://www.ansible.com/) конфигурации, можно воспользоваться, например [Kubespray](https://kubernetes.io/docs/setup/production-environment/tools/kubespray/)  
-   в. Задеплоить Kubernetes на подготовленные ранее инстансы, в случае нехватки каких-либо ресурсов вы всегда можете создать их при помощи Terraform.
-2. Альтернативный вариант: воспользуйтесь сервисом [Yandex Managed Service for Kubernetes](https://cloud.yandex.ru/services/managed-kubernetes)  
+   в. Задеплоить Kubernetes на подготовленные ранее инстансы, в случае нехватки каких-либо ресурсов вы всегда можете создать их при помощи Terraform.  
+>Выбрал этот вариант.   
+>Создал с помощью terraform (код [тут](terraform/)) 3 инстанса ВМ.  
+![](screenshots/Снимок%20экрана%202023-07-27%20в%2022.22.41.png)
+>Подготовил код ansible (kubespray). Изучить можно [тут](kubespray/):  
+>* [Инвентарь](kubespray/inventory/yc-gw-cluster/hosts.yaml)  
+>* [Настройки кластера](kubespray/inventory/yc-gw-cluster/group_vars/k8s_cluster/k8s-cluster.yml)  
+  
+>Выполняю команду установки python3 зависемостей, но так как я ранее уже ставил все зависимости, то нового ничего не установилось:
+```
+$ sudo pip3.11 install -r requirements.txt
+
+Requirement already satisfied: ansible==7.6.0 in /opt/homebrew/lib/python3.11/site-packages (from -r requirements.txt (line 1)) (7.6.0)
+Requirement already satisfied: ansible-core==2.14.6 in /opt/homebrew/lib/python3.11/site-packages (from -r requirements.txt (line 2)) (2.14.6)
+Requirement already satisfied: cryptography==41.0.1 in /opt/homebrew/lib/python3.11/site-packages (from -r requirements.txt (line 3)) (41.0.1)
+Requirement already satisfied: jinja2==3.1.2 in /opt/homebrew/lib/python3.11/site-packages (from -r requirements.txt (line 4)) (3.1.2)
+Requirement already satisfied: jmespath==1.0.1 in /opt/homebrew/lib/python3.11/site-packages (from -r requirements.txt (line 5)) (1.0.1)
+Requirement already satisfied: MarkupSafe==2.1.3 in /opt/homebrew/lib/python3.11/site-packages (from -r requirements.txt (line 6)) (2.1.3)
+Requirement already satisfied: netaddr==0.8.0 in /opt/homebrew/lib/python3.11/site-packages (from -r requirements.txt (line 7)) (0.8.0)
+Requirement already satisfied: pbr==5.11.1 in /opt/homebrew/lib/python3.11/site-packages (from -r requirements.txt (line 8)) (5.11.1)
+Requirement already satisfied: ruamel.yaml==0.17.31 in /opt/homebrew/lib/python3.11/site-packages (from -r requirements.txt (line 9)) (0.17.31)
+Requirement already satisfied: ruamel.yaml.clib==0.2.7 in /opt/homebrew/lib/python3.11/site-packages (from -r requirements.txt (line 10)) (0.2.7)
+Requirement already satisfied: PyYAML>=5.1 in /opt/homebrew/lib/python3.11/site-packages (from ansible-core==2.14.6->-r requirements.txt (line 2)) (6.0)
+Requirement already satisfied: packaging in /opt/homebrew/lib/python3.11/site-packages (from ansible-core==2.14.6->-r requirements.txt (line 2)) (23.1)
+Requirement already satisfied: resolvelib<0.9.0,>=0.5.3 in /opt/homebrew/lib/python3.11/site-packages (from ansible-core==2.14.6->-r requirements.txt (line 2)) (0.8.1)
+Requirement already satisfied: cffi>=1.12 in /opt/homebrew/lib/python3.11/site-packages (from cryptography==41.0.1->-r requirements.txt (line 3)) (1.15.1)
+Requirement already satisfied: pycparser in /opt/homebrew/lib/python3.11/site-packages (from cffi>=1.12->cryptography==41.0.1->-r requirements.txt (line 3)) (2.21)
+```
+> Запускаю ansible:
+```
+$ ansible-playbook -i inventory/yc-gw-cluster/hosts.yaml -u ubuntu --become --become-user=root cluster.yml 
+```
+> Через 20 минут получаю вывод о завершении процедуры установки `kubernetes`:
+```
+PLAY RECAP ************************************************************************************************************************************************************
+localhost                  : ok=3    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+vm-instance-1              : ok=738  changed=148  unreachable=0    failed=0    skipped=1213 rescued=0    ignored=5   
+vm-instance-2              : ok=505  changed=93   unreachable=0    failed=0    skipped=727  rescued=0    ignored=1   
+vm-instance-3              : ok=505  changed=93   unreachable=0    failed=0    skipped=725  rescued=0    ignored=1   
+
+четверг 27 июля 2023  22:13:23 +0300 (0:00:00.076)       0:19:26.395 ********** 
+=============================================================================== 
+kubernetes-apps/ingress_controller/ingress_nginx : NGINX Ingress Controller | Create manifests ---------------------------------------------------------------- 42.20s
+kubernetes-apps/ansible : Kubernetes Apps | Lay Down CoreDNS templates ---------------------------------------------------------------------------------------- 37.16s
+kubernetes-apps/metrics_server : Metrics Server | Create manifests -------------------------------------------------------------------------------------------- 34.05s
+kubernetes/kubeadm : Join to cluster -------------------------------------------------------------------------------------------------------------------------- 32.56s
+kubernetes/preinstall : Install packages requirements --------------------------------------------------------------------------------------------------------- 22.91s
+kubernetes/control-plane : Kubeadm | Initialize first master -------------------------------------------------------------------------------------------------- 16.94s
+download : Download_container | Download image if required ---------------------------------------------------------------------------------------------------- 16.55s
+kubernetes-apps/ansible : Kubernetes Apps | Start Resources --------------------------------------------------------------------------------------------------- 15.39s
+download : Download_container | Download image if required ---------------------------------------------------------------------------------------------------- 13.12s
+kubernetes/preinstall : Update package management cache (APT) ------------------------------------------------------------------------------------------------- 11.73s
+kubernetes-apps/ingress_controller/ingress_nginx : NGINX Ingress Controller | Apply manifests ----------------------------------------------------------------- 11.63s
+kubernetes-apps/ansible : Kubernetes Apps | Lay Down nodelocaldns Template ------------------------------------------------------------------------------------ 11.31s
+etcd : Reload etcd -------------------------------------------------------------------------------------------------------------------------------------------- 10.04s
+download : Download_file | Download item ----------------------------------------------------------------------------------------------------------------------- 9.47s
+network_plugin/flannel : Flannel | Create Flannel manifests ---------------------------------------------------------------------------------------------------- 9.14s
+kubernetes-apps/metrics_server : Metrics Server | Apply manifests ---------------------------------------------------------------------------------------------- 9.01s
+container-engine/containerd : Download_file | Download item ---------------------------------------------------------------------------------------------------- 8.23s
+kubernetes/preinstall : Preinstall | wait for the apiserver to be running -------------------------------------------------------------------------------------- 8.18s
+container-engine/containerd : Containerd | Unpack containerd archive ------------------------------------------------------------------------------------------- 8.03s
+container-engine/crictl : Extract_file | Unpacking archive ----------------------------------------------------------------------------------------------------- 7.77s
+```
+>Прописал пользователю конфигурацию для `kubectl` на мастер ноде:
+```
+$ mkdir -p $HOME/.kube    
+$ sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config  
+$ sudo chown $(id -u):$(id -g) $HOME/.kube/config
+```
+>Запрашиваю вывод из k8s:
+```
+$ kubectl get pods --all-namespaces
+NAMESPACE       NAME                                    READY   STATUS    RESTARTS   AGE
+ingress-nginx   ingress-nginx-controller-8zq62          1/1     Running   0          6m15s
+ingress-nginx   ingress-nginx-controller-dwt5b          1/1     Running   0          6m15s
+kube-system     coredns-645b46f4b6-265cs                1/1     Running   0          5m6s
+kube-system     coredns-645b46f4b6-rwdbg                1/1     Running   0          5m14s
+kube-system     dns-autoscaler-659b8c48cb-ljpmr         1/1     Running   0          5m7s
+kube-system     kube-apiserver-vm-instance-1            1/1     Running   2          9m22s
+kube-system     kube-controller-manager-vm-instance-1   1/1     Running   2          9m22s
+kube-system     kube-flannel-fmtkw                      1/1     Running   0          7m16s
+kube-system     kube-flannel-nd84g                      1/1     Running   0          7m16s
+kube-system     kube-flannel-qpq77                      1/1     Running   0          7m16s
+kube-system     kube-proxy-8jwvf                        1/1     Running   0          7m49s
+kube-system     kube-proxy-gqc85                        1/1     Running   0          7m49s
+kube-system     kube-proxy-sd47g                        1/1     Running   0          7m49s
+kube-system     kube-scheduler-vm-instance-1            1/1     Running   1          9m22s
+kube-system     metrics-server-79f59df77f-hm9ff         1/1     Running   0          3m56s
+kube-system     nginx-proxy-vm-instance-2               1/1     Running   0          7m24s
+kube-system     nginx-proxy-vm-instance-3               1/1     Running   0          7m24s
+kube-system     nodelocaldns-j8bzv                      1/1     Running   0          5m5s
+kube-system     nodelocaldns-nl9cs                      1/1     Running   0          5m5s
+kube-system     nodelocaldns-pb2qk                      1/1     Running   0          5m5s
+```
+
+~~2. Альтернативный вариант: воспользуйтесь сервисом [Yandex Managed Service for Kubernetes](https://cloud.yandex.ru/services/managed-kubernetes)  
   а. С помощью terraform resource для [kubernetes](https://registry.terraform.io/providers/yandex-cloud/yandex/latest/docs/resources/kubernetes_cluster) создать региональный мастер kubernetes с размещением нод в разных 3 подсетях      
-  б. С помощью terraform resource для [kubernetes node group](https://registry.terraform.io/providers/yandex-cloud/yandex/latest/docs/resources/kubernetes_node_group)
+  б. С помощью terraform resource для [kubernetes node group](https://registry.terraform.io/providers/yandex-cloud/yandex/latest/docs/resources/kubernetes_node_group)~~
   
 Ожидаемый результат:
 

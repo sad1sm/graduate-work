@@ -1,0 +1,6 @@
+vm_instance_name        = "vm-instance"
+vm_instance_platform_id = "standard-v1"
+vm_instance_core        = "2"
+vm_instance_memory      = "4"
+vm_instance_image_id    = "fd8bkgba66kkf9eenpkb"
+vm_instance_disk        = "100"

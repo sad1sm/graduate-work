@@ -8,7 +8,8 @@ terraform {
 }
 
 resource "yandex_compute_instance" "instance" {
-  name        = var.instance_name
+  count       = var.node_count
+  name        = "${var.instance_name}-${count.index + 1}"
   platform_id = var.platform_id
   zone        = var.zone
 
@@ -20,6 +21,7 @@ resource "yandex_compute_instance" "instance" {
   boot_disk {
     initialize_params {
       image_id = var.image_id
+      size     = var.disk_size
     }
   }
 
@@ -30,6 +32,6 @@ resource "yandex_compute_instance" "instance" {
   }
 
   metadata = {
-    ssh-keys = "ubuntu:${file("~/.ssh/id_ed25519.pub")}"
+    ssh-keys = "ubuntu:${file("./.ssh/id_ed25519.pub")}"
   }
 }
