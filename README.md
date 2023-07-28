@@ -83,7 +83,7 @@ stage
    б. Подготовить [ansible](https://www.ansible.com/) конфигурации, можно воспользоваться, например [Kubespray](https://kubernetes.io/docs/setup/production-environment/tools/kubespray/)  
    в. Задеплоить Kubernetes на подготовленные ранее инстансы, в случае нехватки каких-либо ресурсов вы всегда можете создать их при помощи Terraform.  
 >Выбрал этот вариант.   
->Создал с помощью terraform (код [тут](terraform/)) 3 инстанса ВМ.  
+>Создал с помощью terraform (код [тут](terraform/modules/vm_instance/main.tf)) 3 инстанса ВМ.  
 ![](screenshots/Снимок%20экрана%202023-07-27%20в%2022.22.41.png)
 >Подготовил код ansible (kubespray). Изучить можно [тут](kubespray/):  
 >* [Инвентарь](kubespray/inventory/yc-gw-cluster/hosts.yaml)  
@@ -195,9 +195,79 @@ kube-system     nodelocaldns-pb2qk                      1/1     Running   0     
 
 1. Рекомендуемый вариант:  
    а. Создайте отдельный git репозиторий с простым nginx конфигом, который будет отдавать статические данные.  
+   >https://github.com/sad1sm/test-app
+
    б. Подготовьте Dockerfile для создания образа приложения.  
-2. Альтернативный вариант:  
-   а. Используйте любой другой код, главное, чтобы был самостоятельно создан Dockerfile.
+>https://github.com/sad1sm/test-app/blob/main/Dockerfile
+   
+>Авторизовался в созданном Container Registry.
+```
+$ yc container registry configure-docker
+docker configured to use yc --profile "tf-user" for authenticating "cr.yandex" container registries
+Credential helper is configured in '~/.docker/config.json'
+```
+>Собрал образ из Dockerfile:
+
+```
+$ docker build -t cr.yandex/crpsnreaq2gmc5c5u615/test-app:latest .
+[+] Building 12.0s (7/7) FINISHED                                                                                                     docker:desktop-linux
+ => [internal] load build definition from Dockerfile                                                                                                  0.0s
+ => => transferring dockerfile: 105B                                                                                                                  0.0s
+ => [internal] load .dockerignore                                                                                                                     0.0s
+ => => transferring context: 2B                                                                                                                       0.0s
+ => [internal] load metadata for docker.io/library/nginx:latest                                                                                       3.4s
+ => [internal] load build context                                                                                                                     0.0s
+ => => transferring context: 550B                                                                                                                     0.0s
+ => [1/2] FROM docker.io/library/nginx:latest@sha256:e67bce60872000987d2a86ea0c4338b7e941accfd2ffd1d62ceaf9a100396c97                                 8.2s
+ => => resolve docker.io/library/nginx:latest@sha256:e67bce60872000987d2a86ea0c4338b7e941accfd2ffd1d62ceaf9a100396c97                                 0.0s
+ => => sha256:a9b1bd25c37b23d4e043de84d6323fbffe475917d8c4d91dcb80843adbedbede 627B / 627B                                                            0.3s
+ => => sha256:2002d33a54f72d1333751d4d1b4793a60a635eac6e94a98daf0acea501580c4f 8.17kB / 8.17kB                                                        0.0s
+ => => sha256:efe5035ea617aed64565034f49744cf23328aa1203e920c3db7026e87cbcc277 38.13MB / 38.13MB                                                      6.2s
+ => => sha256:3ae0c06b4d3aa97d7e0829233dd36cea1666b87074e55fea6bd1ecae066693c7 29.15MB / 29.15MB                                                      5.9s
+ => => sha256:e67bce60872000987d2a86ea0c4338b7e941accfd2ffd1d62ceaf9a100396c97 1.86kB / 1.86kB                                                        0.0s
+ => => sha256:b02b0565e769314abcf0be98f78cb473bcf0a2280c11fd01a13f0043a62e5059 1.78kB / 1.78kB                                                        0.0s
+ => => sha256:f853dda6947e3bc42dcea26ae7236bdfd7523590eed8a79dd6ba637d81a56ede 958B / 958B                                                            0.5s
+ => => sha256:38f44e054f7ba4152e79dc51ceb5aa73811ba9702d57c4e8d141ec45abb8b5b0 367B / 367B                                                            0.9s
+ => => sha256:ed88a19ddb46d315df55e35b2e0a85beffa5de25d937c011bac3f040ac3b0480 1.21kB / 1.21kB                                                        1.8s
+ => => sha256:495e6abbed484ab1ade6467bf5ef09b3f098c5edd7f2fc0afd0463ba3a4d309b 1.41kB / 1.41kB                                                        2.1s
+ => => extracting sha256:3ae0c06b4d3aa97d7e0829233dd36cea1666b87074e55fea6bd1ecae066693c7                                                             1.3s
+ => => extracting sha256:efe5035ea617aed64565034f49744cf23328aa1203e920c3db7026e87cbcc277                                                             0.8s
+ => => extracting sha256:a9b1bd25c37b23d4e043de84d6323fbffe475917d8c4d91dcb80843adbedbede                                                             0.0s
+ => => extracting sha256:f853dda6947e3bc42dcea26ae7236bdfd7523590eed8a79dd6ba637d81a56ede                                                             0.0s
+ => => extracting sha256:38f44e054f7ba4152e79dc51ceb5aa73811ba9702d57c4e8d141ec45abb8b5b0                                                             0.0s
+ => => extracting sha256:ed88a19ddb46d315df55e35b2e0a85beffa5de25d937c011bac3f040ac3b0480                                                             0.0s
+ => => extracting sha256:495e6abbed484ab1ade6467bf5ef09b3f098c5edd7f2fc0afd0463ba3a4d309b                                                             0.0s
+ => [2/2] COPY ./index.html /usr/share/nginx/html/index.html                                                                                          0.4s
+ => exporting to image                                                                                                                                0.0s
+ => => exporting layers                                                                                                                               0.0s
+ => => writing image sha256:e3348b6973be216b1e75b9cefb1104bbb8a94f65f1cff6c3d1debc8bb0f8bedb                                                          0.0s
+ => => naming to cr.yandex/crpsnreaq2gmc5c5u615/test-app:latest                                                                                       0.0s
+```
+>Запушил образ в registry:
+```
+$ docker push cr.yandex/crpsnreaq2gmc5c5u615/test-app:latest
+The push refers to repository [cr.yandex/crpsnreaq2gmc5c5u615/test-app]
+34c12c4fc620: Pushed 
+0a13d2aaa54c: Pushed 
+45437bbd87f2: Pushed 
+7cd1e5cbf124: Pushed 
+ad6517b0c914: Pushed 
+4e6bef96e37e: Pushed 
+c58d5a26ffa8: Pushed 
+efd1965f1684: Pushed 
+latest: digest: sha256:0a04aa00b05805b6161ccd0574a87a0b12362a438fab63035db6e597b08dc889 size: 1985
+```
+
+>Container Registry:  
+cr.yandex/crpsnreaq2gmc5c5u615/test-app:latest
+   
+>Терраформ код [тут](terraform/modules/registry/main.tf).
+
+>Успешный запуск terraform кода:
+![](screenshots/Снимок%20экрана%202023-07-28%20в%2011.56.14.png)
+
+~~2. Альтернативный вариант:  
+   а. Используйте любой другой код, главное, чтобы был самостоятельно создан Dockerfile.~~
 
 Ожидаемый результат:
 

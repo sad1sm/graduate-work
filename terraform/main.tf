@@ -45,3 +45,8 @@ module "vm_instance" {
   subnet_id       = module.network_zone_a.subnet_id
 }
 
+module "container_registry" {
+  source = "./modules/registry"
+  cr_name = "stage-registry"
+  folder_id = ""
+}
