@@ -1,0 +1,33 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: {{ .Chart.Name }}
+    service: application
+  name: {{ .Chart.Name }}-nginx
+spec:
+  replicas: {{ .Values.replicasCount }}
+  selector:
+    matchLabels:
+      app: {{ .Chart.Name }}
+      service: application
+  template:
+    metadata:
+      labels:
+        app: {{ .Chart.Name }}
+        service: application
+    spec:
+      containers:
+        - image: {{ .Values.image.name }}:{{ .Values.image.tag | default .Chart.AppVersion }}
+          imagePullPolicy: Always
+          name: application
+          ports:
+            - name: web
+              containerPort: 80
+          env:
+            - name: APP_VERSION
+              value: {{ .Values.image.tag | default .Chart.AppVersion }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      terminationGracePeriodSeconds: 30

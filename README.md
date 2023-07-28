@@ -88,6 +88,7 @@ stage
 >Подготовил код ansible (kubespray). Изучить можно [тут](kubespray/):  
 >* [Инвентарь](kubespray/inventory/yc-gw-cluster/hosts.yaml)  
 >* [Настройки кластера](kubespray/inventory/yc-gw-cluster/group_vars/k8s_cluster/k8s-cluster.yml)  
+>* [Аддоны (nginx-ingress)](kubespray/inventory/yc-gw-cluster/group_vars/k8s_cluster/addons.yml)
   
 >Выполняю команду установки python3 зависемостей, но так как я ранее уже ставил все зависимости, то нового ничего не установилось:
 ```
@@ -284,13 +285,86 @@ cr.yandex/crpsnreaq2gmc5c5u615/test-app:latest
 1. Задеплоить в кластер [prometheus](https://prometheus.io/), [grafana](https://grafana.com/), [alertmanager](https://github.com/prometheus/alertmanager), [экспортер](https://github.com/prometheus/node_exporter) основных метрик Kubernetes.
 2. Задеплоить тестовое приложение, например, [nginx](https://www.nginx.com/) сервер отдающий статическую страницу.
 
-Рекомендуемый способ выполнения:
-1. Воспользовать пакетом [kube-prometheus](https://github.com/prometheus-operator/kube-prometheus), который уже включает в себя [Kubernetes оператор](https://operatorhub.io/) для [grafana](https://grafana.com/), [prometheus](https://prometheus.io/), [alertmanager](https://github.com/prometheus/alertmanager) и [node_exporter](https://github.com/prometheus/node_exporter). При желании можете собрать все эти приложения отдельно.
-2. Для организации конфигурации использовать [qbec](https://qbec.io/), основанный на [jsonnet](https://jsonnet.org/). Обратите внимание на имеющиеся функции для интеграции helm конфигов и [helm charts](https://helm.sh/)
-3. Если на первом этапе вы не воспользовались [Terraform Cloud](https://app.terraform.io/), то задеплойте в кластер [atlantis](https://www.runatlantis.io/) для отслеживания изменений инфраструктуры.
+~~Рекомендуемый способ выполнения:~~  
+~~1. Воспользовать пакетом [kube-prometheus](https://github.com/prometheus-operator/kube-prometheus), который уже включает в себя [Kubernetes оператор](https://operatorhub.io/) для [grafana](https://grafana.com/), [prometheus](https://prometheus.io/), [alertmanager](https://github.com/prometheus/alertmanager) и [node_exporter](https://github.com/prometheus/node_exporter). При желании можете собрать все эти приложения отдельно.  
+2. Для организации конфигурации использовать [qbec](https://qbec.io/), основанный на [jsonnet](https://jsonnet.org/). Обратите внимание на имеющиеся функции для интеграции helm конфигов и [helm charts](https://helm.sh/)  
+3. Если на первом этапе вы не воспользовались [Terraform Cloud](https://app.terraform.io/), то задеплойте в кластер [atlantis](https://www.runatlantis.io/) для отслеживания изменений инфраструктуры.~~
 
 Альтернативный вариант:
 1. Для организации конфигурации можно использовать [helm charts](https://helm.sh/)
+
+>Для деплоя был создан helm-чарт для тестового приложения и использован готовый helm-чарт для мониторинга, atlantis не ставил, использую terraform cloud:
+>* [Helm-chart test-app](helm-charts/test-app/)
+>* [values.yaml](helm-charts/kube-ps/values.yaml) для helm-chart [kube-prometheus](https://artifacthub.io/packages/helm/prometheus-community/kube-prometheus-stack)
+
+>Добавил репозиторий и развернул мониторинг:
+```
+ubuntu@vm-instance-1:~$ helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+"prometheus-community" has been added to your repositories
+ubuntu@vm-instance-1:~$ helm repo update
+Hang tight while we grab the latest from your chart repositories...
+...Successfully got an update from the "prometheus-community" chart repository
+Update Complete. ⎈Happy Helming!⎈
+ubuntu@vm-instance-1:~$ helm install monitoring prometheus-community/kube-prometheus-stack -f helm-charts/kube-ps/values.yaml
+NAME: monitoring
+LAST DEPLOYED: Fri Jul 28 14:20:28 2023
+NAMESPACE: default
+STATUS: deployed
+REVISION: 1
+NOTES:
+kube-prometheus-stack has been installed. Check its status by running:
+  kubectl --namespace default get pods -l "release=monitoring"
+
+Visit https://github.com/prometheus-operator/kube-prometheus for instructions on how to create & configure Alertmanager and Prometheus instances using the Operator.
+
+```
+>Проверяю вывод:
+```
+ubuntu@vm-instance-1:~$ kubectl get pods 
+NAME                                                     READY   STATUS    RESTARTS   AGE
+alertmanager-monitoring-kube-prometheus-alertmanager-0   2/2     Running   0          103m
+monitoring-grafana-7db4dbd6cb-ljdfb                      3/3     Running   0          103m
+monitoring-kube-prometheus-operator-85686465fb-jlh8h     1/1     Running   0          103m
+monitoring-kube-state-metrics-79d6f8c9c-b2tqp            1/1     Running   0          103m
+monitoring-prometheus-node-exporter-ps4h2                1/1     Running   0          103m
+monitoring-prometheus-node-exporter-vg6r2                1/1     Running   0          103m
+monitoring-prometheus-node-exporter-z9f9w                1/1     Running   0          103m
+prometheus-monitoring-kube-prometheus-prometheus-0       2/2     Running   0          103m
+```
+>Разворачиваю helm-chart с тестовым приложением:
+```
+ubuntu@vm-instance-1:~$ helm install test-app helm-charts/test-app
+NAME: test-app
+LAST DEPLOYED: Fri Jul 28 17:00:22 2023
+NAMESPACE: default
+STATUS: deployed
+REVISION: 1
+TEST SUITE: None
+NOTES:
+---
+Test-app. V. latest
+---
+```
+>Проверяю вывод:
+```
+ubuntu@vm-instance-1:~$ kubectl get pods 
+NAME                                                     READY   STATUS    RESTARTS   AGE
+alertmanager-monitoring-kube-prometheus-alertmanager-0   2/2     Running   0          163m
+monitoring-grafana-7db4dbd6cb-ljdfb                      3/3     Running   0          163m
+monitoring-kube-prometheus-operator-85686465fb-jlh8h     1/1     Running   0          163m
+monitoring-kube-state-metrics-79d6f8c9c-b2tqp            1/1     Running   0          163m
+monitoring-prometheus-node-exporter-ps4h2                1/1     Running   0          163m
+monitoring-prometheus-node-exporter-vg6r2                1/1     Running   0          163m
+monitoring-prometheus-node-exporter-z9f9w                1/1     Running   0          163m
+prometheus-monitoring-kube-prometheus-prometheus-0       2/2     Running   0          163m
+test-app-nginx-5d5954b7dc-fzjd4                          1/1     Running   0          3m50s
+```
+>Grafana доступна по адресу http://grafana.f1tz.ru  
+>u: admin  
+>p: QQBFfIhD20  
+![](screenshots/Снимок%20экрана%202023-07-28%20в%2020.24.51.png)
+>Приложение доступно по адресу: http://test-app.f1tz.ru  
+![](screenshots/Снимок%20экрана%202023-07-28%20в%2020.25.10.png)
 
 Ожидаемый результат:
 1. Git репозиторий с конфигурационными файлами для настройки Kubernetes.
