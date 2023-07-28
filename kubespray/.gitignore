@@ -24,6 +24,7 @@ plugins/mitogen
 
 # Ansible inventory
 inventory/*
+!inventory/yc-gw-cluster
 !inventory/local
 !inventory/sample
 inventory/*/artifacts/
