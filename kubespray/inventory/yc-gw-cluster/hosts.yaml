@@ -1,15 +1,15 @@
 all:
   hosts:
     vm-instance-1:
-      ansible_host: 51.250.4.238
+      ansible_host: 158.160.113.16
       ip: 192.168.10.25
       access_ip: 192.168.10.25
     vm-instance-2:
-      ansible_host: 158.160.101.195
+      ansible_host: 158.160.116.91
       ip: 192.168.10.36
       access_ip: 192.168.10.36
     vm-instance-3:
-      ansible_host: 158.160.116.43
+      ansible_host: 158.160.104.51
       ip: 192.168.10.4
       access_ip: 192.168.10.4
   children:
